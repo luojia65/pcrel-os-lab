@@ -98,9 +98,12 @@ unsafe fn main() -> ! {
         .option norelax
     1:  auipc ra, %pcrel_hi(1f)
         ld ra, %pcrel_lo(1b)(ra)
+    2:  auipc sp, %pcrel_hi(2f)
+        ld sp, %pcrel_lo(2b)(sp)
         jr ra
         .align  3
     1:  .dword _abs_start
+    2:  .dword _sstack
         .option pop
     ");
     loop {}
