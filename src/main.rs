@@ -58,10 +58,15 @@ unsafe fn main() -> ! {
         sext = lateout(reg) _,
         high_bit = lateout(reg) _,
     );
-    extern {
-        static _stext: u8;
-    }
-    let start_vaddr = &_stext as *const _ as usize;
+    let start_vaddr: usize;
+    asm!("
+    1:  auipc   {start_vaddr}, %pcrel_hi(1f)
+        ld      {start_vaddr}, %pcrel_lo(1b)({start_vaddr})
+        j       2f
+        .align  3
+    1:  .dword _stext
+    2:
+    ", start_vaddr = out(reg) start_vaddr);
     // start_vaddr => start_paddr
     let vpn2 = (start_vaddr >> 30) & 0x1FF;
     __BOOT_PAGE_2.0[vpn2] = (start_paddr >> 2) | 0x0f; // vrwx
@@ -89,13 +94,12 @@ unsafe fn main() -> ! {
 
         .option push
         .option norelax
-    1:
-        auipc ra, %pcrel_hi(1f)
+
+    1:  auipc ra, %pcrel_hi(1f)
         ld ra, %pcrel_lo(1b)(ra)
         jr ra
         .align  3
-    1:
-        .dword _abs_start
+    1:  .dword _abs_start
         .option pop
     ", 
         satp = in(reg) page2_paddr,
