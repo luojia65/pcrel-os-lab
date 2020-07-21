@@ -40,7 +40,7 @@ unsafe fn main() -> ! {
     asm!("
         auipc   {start_paddr}, 0
         la      sp, _sstack
-        andi    {tmp}, {start_paddr}, -2048 /* 0xFFF */
+        andi    {tmp}, {start_paddr}, -1 /* 0xFFF */
     1:  beqz    {tmp}, 1b
         li      {mask}, (0xFF << 56)
         and     {sext}, {start_paddr}, {mask}
@@ -58,29 +58,28 @@ unsafe fn main() -> ! {
         sext = lateout(reg) _,
         high_bit = lateout(reg) _,
     );
-    // 0xffffffff80000000 => start_paddr
-    let vpn2 = 510;
-    __BOOT_PAGE_2.0[vpn2] = (start_paddr >> 2) & 0x0f; // vrwx
-    // start_paddr (start_vaddr = start_paddr) => start_paddr
-    let (vpn0, vpn1, vpn2) = (
-        (start_paddr >> 12) & 0x1FF, 
-        (start_paddr >> 21) & 0x1FF, 
-        (start_paddr >> 30) & 0x1FF, 
-    );
     extern {
         static _stext: u8;
     }
     let start_vaddr = &_stext as *const _ as usize;
-    let page2_vaddr = &__BOOT_PAGE_2 as *const _ as usize;
-    let page2_paddr = page2_vaddr - start_vaddr + start_paddr;
-    
-    let page1_vaddr = &__BOOT_PAGE_1 as *const _ as usize;
-    let page1_paddr = page1_vaddr - start_vaddr + start_paddr;
-    __BOOT_PAGE_2.0[vpn2] = page1_paddr >> 2; // & 0x00 for leaf
+    // 0xffffffff80000000 => start_paddr
+    let vpn2 = 510;
+    __BOOT_PAGE_2.0[vpn2] = (start_paddr >> 2) | 0x0f; // vrwx
+    // start_paddr (start_vaddr = start_paddr) => start_paddr
+    let (vpn2, vpn1, vpn0) = (
+        (start_paddr >> 30) & 0x1FF, 
+        (start_paddr >> 21) & 0x1FF, 
+        (start_paddr >> 12) & 0x1FF, 
+    );
+    __BOOT_PAGE_0.0[vpn0] = (start_paddr >> 2) | 0x0f;
     let page0_vaddr = &__BOOT_PAGE_0 as *const _ as usize;
     let page0_paddr = page0_vaddr - start_vaddr + start_paddr;
-    __BOOT_PAGE_1.0[vpn1] = page0_paddr >> 2;// & 0x00 for leaf
-    __BOOT_PAGE_0.0[vpn0] = (start_paddr >> 2) & 0x0f;
+    __BOOT_PAGE_1.0[vpn1] = (page0_paddr >> 2) | 0x01; // for leaf
+    let page1_vaddr = &__BOOT_PAGE_1 as *const _ as usize;
+    let page1_paddr = page1_vaddr - start_vaddr + start_paddr;
+    __BOOT_PAGE_2.0[vpn2] = (page1_paddr >> 2) | 0x01; // for leaf
+    let page2_vaddr = &__BOOT_PAGE_2 as *const _ as usize;
+    let page2_paddr = page2_vaddr - start_vaddr + start_paddr;
     asm!("
         srli    {satp}, {satp}, 12
         li      {mode}, 8 << 60
@@ -100,7 +99,7 @@ unsafe fn main() -> ! {
     .option pop
     ", 
         satp = in(reg) page2_paddr,
-        mode = lateout(reg) _,
+        mode = out(reg) _,
     );
     loop {}
 }

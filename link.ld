@@ -1,9 +1,9 @@
 MEMORY {
     /* 存储单元的物理地址 */
-    SRAM : ORIGIN = 0xffffffff80200000, LENGTH = 128M
+    SRAM : ORIGIN = 0xffffffff80000000, LENGTH = 128M
 }
 
-PROVIDE(_stext = 0xffffffff80200000);
+PROVIDE(_stext = 0xffffffff80000000);
 PROVIDE(_heap_size = 128K);
 PROVIDE(_hart_stack_size = 64K);
 PROVIDE(_max_hart_id = 7); 
