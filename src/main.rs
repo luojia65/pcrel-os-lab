@@ -96,7 +96,7 @@ unsafe fn main() -> ! {
         .align  3
     1:
         .dword _abs_start
-    .option pop
+        .option pop
     ", 
         satp = in(reg) page2_paddr,
         mode = out(reg) _,
