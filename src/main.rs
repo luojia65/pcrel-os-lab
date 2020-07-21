@@ -36,75 +36,73 @@ static mut __BOOT_PAGE_0: __Page = __Page([0; 512]);
 #[link_section = ".init"] // this is stable
 #[naked]
 unsafe fn main() -> ! {
-    let start_paddr: usize;
     asm!("
-        auipc   {start_paddr}, 0
-        la      sp, _sstack
-        andi    {tmp}, {start_paddr}, -1 /* 0xFFF */
-    1:  beqz    {tmp}, 1b
-        li      {mask}, (0xFF << 56)
-        and     {sext}, {start_paddr}, {mask}
-        li      {high_bit}, (1 << 55)
-        and     {high_bit}, {start_paddr}, {high_bit}
-        beqz    {high_bit}, 2f
-    1:  bne     {sext}, {mask}, 1b
-        j       3f
-    2:  bnez    {sext}, 2b
-    3:
-    ", 
-        start_paddr = out(reg) start_paddr,
-        tmp = lateout(reg) _,
-        mask = lateout(reg) _,
-        sext = lateout(reg) _,
-        high_bit = lateout(reg) _,
-    );
-    let start_vaddr: usize;
-    asm!("
-    1:  auipc   {start_vaddr}, %pcrel_hi(1f)
-        ld      {start_vaddr}, %pcrel_lo(1b)({start_vaddr})
+        auipc   t0, 0   /* t0: start paddr */
+        
+    1:  auipc   t1, %pcrel_hi(1f)
+        ld      t1, %pcrel_lo(1b)(t1)
         j       2f
         .align  3
     1:  .dword _stext
-    2:
-    ", start_vaddr = out(reg) start_vaddr);
-    // start_vaddr => start_paddr
-    let vpn2 = (start_vaddr >> 30) & 0x1FF;
-    __BOOT_PAGE_2.0[vpn2] = (start_paddr >> 2) | 0x0f; // vrwx
-    // start_paddr (start_vaddr = start_paddr) => start_paddr
-    let (vpn2, vpn1, vpn0) = (
-        (start_paddr >> 30) & 0x1FF, 
-        (start_paddr >> 21) & 0x1FF, 
-        (start_paddr >> 12) & 0x1FF, 
-    );
-    __BOOT_PAGE_0.0[vpn0] = (start_paddr >> 2) | 0x0f;
-    let page0_vaddr = &__BOOT_PAGE_0 as *const _ as usize;
-    let page0_paddr = page0_vaddr - start_vaddr + start_paddr;
-    __BOOT_PAGE_1.0[vpn1] = (page0_paddr >> 2) | 0x01; // for leaf
-    let page1_vaddr = &__BOOT_PAGE_1 as *const _ as usize;
-    let page1_paddr = page1_vaddr - start_vaddr + start_paddr;
-    __BOOT_PAGE_2.0[vpn2] = (page1_paddr >> 2) | 0x01; // for leaf
-    let page2_vaddr = &__BOOT_PAGE_2 as *const _ as usize;
-    let page2_paddr = page2_vaddr - start_vaddr + start_paddr;
-    asm!("
-        srli    {satp}, {satp}, 12
-        li      {mode}, 8 << 60
-        or      {satp}, {satp}, {mode}
-        csrw    satp, {satp}
+    2:      /* t1: start vaddr */
+
+        /* Load boot page for start_vaddr => start_paddr */
+        la      t2, _boot_page_2    \n/* t2: boot_page_2_paddr */
+        srli    t3, t1, 30
+        andi    t3, t3, 0x1FF       \n/* t3: vpn2(start_vaddr) */
+        slli    t4, t3, 3           \n/* t4: vpn2 * 8 */
+        add     t5, t4, t2          \n/* t5: boot_page_2[vpn2] */
+        srli    t6, t0, 2
+        ori     t6, t6, 0x0F        \n/* t6: pte entry value, vrwx */
+        sd      t6, 0(t5)
+
+        /* Load boot page for start_paddr => start_paddr */
+        la      t2, _boot_page_0    \n/* t2: boot_page_0_paddr */
+        srli    t3, t0, 12
+        andi    t3, t3, 0x1FF       \n/* t3: vpn0 */
+        slli    t4, t3, 3           \n/* t4: vpn0 * 8 */
+        add     t5, t4, t2          \n/* t5: boot_page_0[vpn0] */
+        srli    t6, t0, 2
+        ori     t6, t6, 0x0F        \n/* t6: pte entry value, ->start_paddr, vrwx */
+        sd      t6, 0(t5)
+        
+        la      t2, _boot_page_1    \n/* t2: boot_page_1_paddr */
+        srli    t3, t0, 21
+        andi    t3, t3, 0x1FF       \n/* t3: vpn1 */
+        slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
+        add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
+        la      t6, _boot_page_0    \n/* t6: boot_page_0_paddr */
+        srli    t6, t6, 2
+        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
+        sd      t6, 0(t5)
+        
+        la      t2, _boot_page_2    \n/* t2: boot_page_2_paddr */
+        srli    t3, t0, 30
+        andi    t3, t3, 0x1FF       \n/* t3: vpn2 */
+        slli    t4, t3, 3           \n/* t4: vpn2 * 8 */
+        add     t5, t4, t2          \n/* t5: boot_page_2[vpn2] */
+        la      t6, _boot_page_1    \n/* t6: boot_page_1_paddr */
+        srli    t6, t6, 2
+        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
+        sd      t6, 0(t5)
+        
+        /* Write boot page address into satp and refresh */
+        srli    t2, t2, 12          \n/* t2: boot_page_2_ppn */
+        li      t3, 8 << 60         \n/* t3: mode (Sv39) */
+        or      t4, t2, t3          \n/* t4: satp value */
+        csrw    satp, t4            
         sfence.vma
 
+        /* Jump to virtual address of _abs_start */
         .option push
         .option norelax
-
     1:  auipc ra, %pcrel_hi(1f)
         ld ra, %pcrel_lo(1b)(ra)
         jr ra
         .align  3
     1:  .dword _abs_start
         .option pop
-    ", 
-        satp = in(reg) page2_paddr,
-        mode = out(reg) _,
-    );
+    ");
     loop {}
 }
 
