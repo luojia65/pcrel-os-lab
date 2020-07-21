@@ -1,9 +1,9 @@
 MEMORY {
     /* 存储单元的物理地址 */
-    SRAM : ORIGIN = 0xffffffff80000000, LENGTH = 128M
+    SRAM : ORIGIN = 0x80000000, LENGTH = 128M
 }
 
-PROVIDE(_stext = 0xffffffff80000000);
+PROVIDE(_stext = 0x80000000); /* 本次实现中必须对齐到1G */
 PROVIDE(_heap_size = 128K);
 PROVIDE(_hart_stack_size = 64K);
 PROVIDE(_max_hart_id = 7); 
@@ -90,3 +90,5 @@ SECTIONS
   .eh_frame (INFO) : { KEEP(*(.eh_frame)) }
   .eh_frame_hdr (INFO) : { *(.eh_frame_hdr) }
 }
+
+ASSERT(_stext % (512 * 512 * 4K) == 0, "virtual address must align to 1G")

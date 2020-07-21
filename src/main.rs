@@ -62,8 +62,8 @@ unsafe fn main() -> ! {
         static _stext: u8;
     }
     let start_vaddr = &_stext as *const _ as usize;
-    // 0xffffffff80000000 => start_paddr
-    let vpn2 = 510;
+    // start_vaddr => start_paddr
+    let vpn2 = (start_vaddr >> 30) & 0x1FF;
     __BOOT_PAGE_2.0[vpn2] = (start_paddr >> 2) | 0x0f; // vrwx
     // start_paddr (start_vaddr = start_paddr) => start_paddr
     let (vpn2, vpn1, vpn0) = (
