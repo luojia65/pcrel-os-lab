@@ -3,7 +3,7 @@ MEMORY {
     SRAM : ORIGIN = 0xffffffff80000000, LENGTH = 128M
 }
 
-PROVIDE(_stext = 0xffffffff80000000); /* 本次实现中虚拟地址必须对齐到1G，因为这部分只有一级页表 */
+PROVIDE(_stext = 0xffffffff80000000); /* 本次实现中虚拟地址必须对齐到2M，因为这部分只有一级页表 */
 PROVIDE(_heap_size = 128K);
 PROVIDE(_hart_stack_size = 64K);
 PROVIDE(_max_hart_id = 7); 
@@ -91,4 +91,4 @@ SECTIONS
   .eh_frame_hdr (INFO) : { *(.eh_frame_hdr) }
 }
 
-ASSERT(_stext % (512 * 512 * 4K) == 0, "virtual address must align to 1G")
+ASSERT(_stext % 2M == 0, "virtual address must align to 2M")

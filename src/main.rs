@@ -27,17 +27,17 @@ struct __Page([usize; 512]);
 
 #[export_name = "_boot_page_2"]
 static mut __BOOT_PAGE_2: __Page = __Page([0; 512]);
-#[export_name = "_boot_page_1"]
-static mut __BOOT_PAGE_1: __Page = __Page([0; 512]);
-#[export_name = "_boot_page_0"]
-static mut __BOOT_PAGE_0: __Page = __Page([0; 512]);
+#[export_name = "_boot_page_1_pa"]
+static mut __BOOT_PAGE_1_PA: __Page = __Page([0; 512]);
+#[export_name = "_boot_page_1_va"]
+static mut __BOOT_PAGE_1_VA: __Page = __Page([0; 512]);
 
 #[export_name = "_start"]
 #[link_section = ".init"] // this is stable
 #[naked]
 unsafe fn main() -> ! {
     asm!("
-        auipc   t0, 0   /* t0: start paddr */
+        auipc   t0, 0   /* t0: start paddr, must align to 2M */
         
     1:  auipc   t1, %pcrel_hi(1f)
         ld      t1, %pcrel_lo(1b)(t1)
@@ -47,33 +47,35 @@ unsafe fn main() -> ! {
     2:      /* t1: start vaddr */
 
         /* Load boot page for start_vaddr => start_paddr */
+        
+        la      t2, _boot_page_1_va \n/* t2: boot_page_1_paddr */
+        srli    t3, t1, 21
+        andi    t3, t3, 0x1FF       \n/* t3: vpn1 */
+        slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
+        add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
+        srli    t6, t0, 2
+        ori     t6, t6, 0x0F        \n/* t6: pte entry value, vrwx */
+        sd      t6, 0(t5)
+
         la      t2, _boot_page_2    \n/* t2: boot_page_2_paddr */
         srli    t3, t1, 30
         andi    t3, t3, 0x1FF       \n/* t3: vpn2(start_vaddr) */
         slli    t4, t3, 3           \n/* t4: vpn2 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_2[vpn2] */
-        srli    t6, t0, 2
-        ori     t6, t6, 0x0F        \n/* t6: pte entry value, vrwx */
+        la      t6, _boot_page_1_va \n/* t6: boot_page_1_paddr */
+        srli    t6, t6, 2
+        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
         sd      t6, 0(t5)
 
         /* Load boot page for start_paddr => start_paddr */
-        la      t2, _boot_page_0    \n/* t2: boot_page_0_paddr */
-        srli    t3, t0, 12
-        andi    t3, t3, 0x1FF       \n/* t3: vpn0 */
-        slli    t4, t3, 3           \n/* t4: vpn0 * 8 */
-        add     t5, t4, t2          \n/* t5: boot_page_0[vpn0] */
-        srli    t6, t0, 2
-        ori     t6, t6, 0x0F        \n/* t6: pte entry value, ->start_paddr, vrwx */
-        sd      t6, 0(t5)
         
-        la      t2, _boot_page_1    \n/* t2: boot_page_1_paddr */
+        la      t2, _boot_page_1_pa \n/* t2: boot_page_1_paddr */
         srli    t3, t0, 21
         andi    t3, t3, 0x1FF       \n/* t3: vpn1 */
         slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
-        la      t6, _boot_page_0    \n/* t6: boot_page_0_paddr */
-        srli    t6, t6, 2
-        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
+        srli    t6, t0, 2
+        ori     t6, t6, 0x0F        \n/* t6: pte entry value, vrwx */
         sd      t6, 0(t5)
         
         la      t2, _boot_page_2    \n/* t2: boot_page_2_paddr */
@@ -81,7 +83,7 @@ unsafe fn main() -> ! {
         andi    t3, t3, 0x1FF       \n/* t3: vpn2 */
         slli    t4, t3, 3           \n/* t4: vpn2 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_2[vpn2] */
-        la      t6, _boot_page_1    \n/* t6: boot_page_1_paddr */
+        la      t6, _boot_page_1_pa \n/* t6: boot_page_1_paddr */
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
         sd      t6, 0(t5)
