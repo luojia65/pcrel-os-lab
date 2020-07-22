@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-
 #![feature(naked_functions)]
 #![feature(alloc_error_handler)]
 #![feature(asm)]
@@ -26,7 +25,8 @@ fn oom(_layout: Layout) -> ! {
 #[link_section = ".init"] // this is stable
 #[naked]
 unsafe fn main() -> ! {
-    asm!("
+    asm!(
+        "
         auipc   t0, 0   /* t0: start paddr, must align to 4K or 2M */
 
         .option push
@@ -236,7 +236,9 @@ unsafe fn main() -> ! {
     1:  .dword _abs_start
     2:  .dword _sstack
         .option pop
-    ", options(noreturn));
+    ",
+        options(noreturn)
+    );
 }
 
 #[export_name = "_abs_start"]
