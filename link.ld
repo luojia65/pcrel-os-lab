@@ -83,7 +83,7 @@ SECTIONS {
     .eh_frame_hdr (INFO) : { *(.eh_frame_hdr) }
 }
 
-ASSERT(_stext % 2M == 0, "virtual address must align to 2M")
+ASSERT(_stext % 2M == 0, "virtual address must align to 2M or 1G")
 
 SECTIONS {
     .free (NOLOAD) : ALIGN(4K) {
