@@ -1,9 +1,9 @@
 MEMORY {
-    /* 存储单元的物理地址 */
-    SRAM : ORIGIN = 0xffffffff80000000, LENGTH = 128M
+    /* 存储单元的虚拟地址 */
+    SRAM : ORIGIN = 0x90000000, LENGTH = 128M
 }
 
-PROVIDE(_stext = 0xffffffff80000000); /* 本次实现中虚拟地址必须对齐到2M，因为这部分只有一级页表 */
+PROVIDE(_stext = 0x90000000); /* 本次实现中虚拟地址必须对齐到2M或1G */
 PROVIDE(_heap_size = 128K);
 PROVIDE(_stack_size = 64K);
 

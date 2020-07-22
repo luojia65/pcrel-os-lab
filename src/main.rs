@@ -39,6 +39,22 @@ unsafe fn main() -> ! {
         .option pop
     2:      /* t1: start vaddr */
 
+        /*
+            If vaddr is not a valid virtual address under Sv39
+            (i.e. bits 39..=63 does not equal to bit 38)
+            The program halts
+        */
+
+        li      t2, 0xffffff8000000000  \n/* t2: bit 39..=63 mask = !((1<<39)-1) */
+        and     t3, t1, t2              \n/* t3: bit 39..=63 in the vaddr */
+        li      t4, (1 << 38)           \n/* t4: bit 38 mask */
+        and     t5, t1, t4
+        beqz    t5, 2f          \n/* If bit 38 is not set, jump to 1f */
+    1:  bne     t3, t2, 1b      \n/* bit 38 is set, check bit 39..=63 equals mask */
+        j       3f
+    2:  bnez    t3, 2b          \n/* bit 38 is clear, check bit 39..=63 equals zero */
+    3:
+        
         /* 
             If vaddr align to 1G and paddr align to 2M, jump to _start_2M_aligned
             Or if vaddr align to 2M and paddr align to 4K, jump to _start_4K_aligned
@@ -156,7 +172,7 @@ unsafe fn main() -> ! {
         li      s0, 4096 * 3
         add     t6, t6, s0          \n/* t6: boot_page_0_va_paddr */
         srli    t6, t6, 2
-        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
+        ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
         sd      t6, 0(t5)
         
         la      t2, _start_free     \n/* t2: boot_page_2_paddr */
