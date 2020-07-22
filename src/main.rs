@@ -45,13 +45,18 @@ unsafe fn main() -> ! {
             Else the program abort
         */
 
-        li      t3, 2 * 1024 * 1024 - 1
-        and     t2, t0, t3
-        beqz    t2, _start_2M_aligned   /* check alignment to 2M */
-        li      t5, 4 * 1024 - 1
-        and     t4, t0, t5
-        beqz    t4, _start_4K_aligned   /* check alignment to 4K */
-    1:  j       1b                      /* Must aligned to 4K, or abort */
+        li      t2, 1 * 1024 * 1024 * 1024 - 1  \n/* t2: 1G align mask */
+        li      t3, 2 * 1024 * 1024 - 1         \n/* t3: 2M align mask */
+        li      t4, 4 * 1024 - 1                \n/* t4: 4K align mask */
+        and     t5, t0, t3                  \n/* paddr is 2M aligned */
+        and     t6, t1, t2                  \n/* vaddr is 1G aligned */
+        or      t6, t5, t6
+        beqz    t6, _start_2M_aligned       \n/* check alignment to 2M */
+        and     t5, t0, t4                  \n/* paddr is 4K aligned */
+        and     t6, t1, t3                  \n/* vaddr is 2M aligned */
+        or      t6, t5, t6
+        beqz    t6, _start_4K_aligned       \n/* check alignment to 4K */
+    1:  j       1b                          \n/* Must aligned to 4K, or abort */
     
     _start_2M_aligned: /* vaddr: 1G; paddr: 2M */
 
@@ -63,14 +68,16 @@ unsafe fn main() -> ! {
         
         la      t2, _start_free     
         li      t3, 4096
-        add     t2, t2, t3          \n/* t2: boot_page_1_va_paddr */
-        srli    t3, t1, 21
-        andi    t3, t3, 0x1FF       \n/* t3: vpn1 */
-        slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
-        add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
-        srli    t6, t0, 2
-        ori     t6, t6, 0x0F        \n/* t6: pte entry value, vrwx */
-        sd      t6, 0(t5)
+        add     t2, t2, t3          \n/* t2: current memory address boot_page_1_va_paddr */
+        li      t3, 512 * 8         
+        add     t3, t3, t2          \n/* t3: maximum memory address */
+        srli    t4, t0, 2
+        ori     t4, t4, 0x0F        \n/* t4: current pte entry value, vrwx */
+        li      t5, (1 << (10 + 9)) \n/* t5: add to t4 to get next ppn */
+    1:  sd      t4, 0(t2)           \n/* Store pte to memory */    
+        addi    t2, t2, 8           \n/* Prepare for next loop */
+        add     t4, t4, t5
+        bltu    t2, t3, 1b          \n/* Jump to next loop */
 
         la      t2, _start_free     \n/* t2: boot_page_2_paddr */
         srli    t3, t1, 30
