@@ -143,15 +143,15 @@ unsafe fn main() -> ! {
     /*  
         _start_free + 0   ..= _start_free + 4K:  boot_page_2_paddr 
         _start_free + 4K  ..= _start_free + 8K:  boot_page_1_va_paddr 
-        _start_free + 12K ..= _start_free + 16K: boot_page_0_va_paddr
-        _start_free + 16K ..= _start_free + 20K: boot_page_0_pa_paddr 
-        _start_free + 8K  ..= _start_free + 12K: boot_page_1_pa_paddr 
+        _start_free + 8K  ..= _start_free + 12K: boot_page_0_va_paddr
+        _start_free + 12K ..= _start_free + 16K: boot_page_0_pa_paddr 
+        _start_free + 16K ..= _start_free + 20K: boot_page_1_pa_paddr 
     */
 
     /* L0 boot page for start_paddr => start_paddr */
 
         la      t2, _start_free     
-        li      t3, 4096 * 4
+        li      t3, 4096 * 3
         add     t2, t2, t3          \n/* t2: boot_page_0_pa_paddr */
         srli    t3, t0, 12
         andi    t3, t3, 0x1FF       \n/* t3: vpn0 */
@@ -164,7 +164,7 @@ unsafe fn main() -> ! {
     /* L0 boot page for start_vaddr => start_paddr */
 
         la      t2, _start_free     
-        li      t3, 4096 * 3
+        li      t3, 4096 * 2
         add     t2, t2, t3          \n/* t2: current memory address boot_page_0_va_paddr */
         li      t3, 512 * 8         
         add     t3, t3, t2          \n/* t3: maximum memory address */
@@ -186,7 +186,7 @@ unsafe fn main() -> ! {
         slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_1[vpn2] */
         la      t6, _start_free     
-        li      s0, 4096 * 3
+        li      s0, 4096 * 2
         add     t6, t6, s0          \n/* t6: boot_page_0_va_paddr */
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
@@ -217,14 +217,14 @@ unsafe fn main() -> ! {
     /* page1pa.vpn1 = page0pa; page2.vpn2 = page1pa */
 
         la      t2, _start_free     
-        li      t3, 4096 * 2
+        li      t3, 4096 * 4
         add     t2, t2, t3          \n/* t2: boot_page_1_pa_paddr */
         srli    t3, t0, 21
         andi    t3, t3, 0x1FF       \n/* t3: vpn1 */
         slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
         la      t6, _start_free     
-        li      s0, 4096 * 4
+        li      s0, 4096 * 3
         add     t6, t6, s0          \n/* t6: boot_page_0_pa_paddr */
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
@@ -236,11 +236,15 @@ unsafe fn main() -> ! {
         slli    t4, t3, 3           \n/* t4: vpn2 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_2[vpn2] */
         la      t6, _start_free     
-        li      s0, 4096 * 2
+        li      s0, 4096 * 4
         add     t6, t6, s0          \n/* t6: boot_page_1_pa_paddr */
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
         sd      t6, 0(t5)
+
+        /* Adjust parameters */
+
+        li      a2, 5 * 4096        \n/* a2: start of free space minus boot pages */
         
         j       _4K_l1_page_finish
 
@@ -270,17 +274,17 @@ unsafe fn main() -> ! {
         slli    t4, t3, 3           \n/* t4: vpn1 * 8 */
         add     t5, t4, t2          \n/* t5: boot_page_1[vpn1] */
         la      t6, _start_free     
-        li      s0, 4096 * 4
+        li      s0, 4096 * 3
         add     t6, t6, s0          \n/* t6: boot_page_0_pa_paddr */
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
         sd      t6, 0(t5)
+        
+        /* Adjust parameters */
+
+        li      a2, 4 * 4096        \n/* a2: start of free space minus boot pages */
 
     _4K_l1_page_finish:
-
-        /* Adjust parameters and start */
-
-        li      a2, 5 * 4096        \n/* a2: start of free space minus boot pages */
 
     _start_paging:
 
