@@ -80,6 +80,20 @@ unsafe fn main() -> ! {
             _start_free + 4K ..= _start_free + 8K:  boot_page_1_va_paddr 
             _start_free + 8K ..= _start_free + 12K: boot_page_1_pa_paddr */
 
+        /* If paddr.vpn2 equals vaddr.vpn2, but paddr.vpn1 != vaddr.vpn1, halt */
+
+        srli    t2, t0, 30
+        and     t2, t2, 0x1FF       \n/* t2: vpn2 of start_paddr */
+        srli    t3, t1, 30
+        and     t3, t3, 0x1FF       \n/* t3: vpn2 of start_vaddr */
+        bne     t2, t3, 2f          \n/* t2 != t3, break; t2 == t3, continue */
+        srli    t4, t0, 21
+        and     t4, t4, 0x1FF       \n/* t4: vpn2 of start_paddr */
+        srli    t5, t1, 21
+        and     t5, t5, 0x1FF       \n/* t5: vpn2 of start_vaddr */
+    1:  bne     t4, t5, 1b          \n/* t4 != t5, loop; t4 == t5, break */
+    2:
+
         /* Load boot page for start_paddr => start_paddr */
         
         la      t2, _start_free     
@@ -279,7 +293,7 @@ unsafe fn main() -> ! {
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
         sd      t6, 0(t5)
-        
+
         /* Adjust parameters */
 
         li      a2, 4 * 4096        \n/* a2: start of free space minus boot pages */
