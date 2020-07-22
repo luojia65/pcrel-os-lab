@@ -182,6 +182,7 @@ unsafe fn main() -> ! {
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_0, v, leaf */
         sd      t6, 0(t5)
+
         la      t2, _start_free     \n/* t2: boot_page_2_paddr */
         srli    t3, t0, 30
         andi    t3, t3, 0x1FF       \n/* t3: vpn2 */
@@ -193,6 +194,7 @@ unsafe fn main() -> ! {
         srli    t6, t6, 2
         ori     t6, t6, 0x01        \n/* t6: pte entry value, ->boot_page_1, v, leaf */
         sd      t6, 0(t5)
+
     /* Load boot page for start_vaddr => start_paddr */
         
         la      t2, _start_free     
@@ -207,6 +209,7 @@ unsafe fn main() -> ! {
         addi    t2, t2, 8           \n/* Prepare for next loop */
         add     t4, t4, t5
         bltu    t2, t3, 1b          \n/* Jump to next loop */
+
         la      t2, _start_free     
         li      t3, 4096
         add     t2, t2, t3          \n/* t2: boot_page_1_va_paddr */
