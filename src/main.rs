@@ -38,6 +38,10 @@ static mut __BOOT_PAGE_1_VA: __Page = __Page([0; 512]);
 unsafe fn main() -> ! {
     asm!("
         auipc   t0, 0   /* t0: start paddr, must align to 2M */
+
+        li      t1, 2 * 1024 * 1024 - 1
+        and     t2, t0, t1
+    1:  bnez    t2, 1b  /* check alignment to 2M */
         
     1:  auipc   t1, %pcrel_hi(1f)
         ld      t1, %pcrel_lo(1b)(t1)
