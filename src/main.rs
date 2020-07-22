@@ -111,8 +111,7 @@ unsafe fn main() -> ! {
     1:  .dword _abs_start
     2:  .dword _sstack
         .option pop
-    ");
-    loop {}
+    ", options(noreturn));
 }
 
 #[export_name = "_abs_start"]
