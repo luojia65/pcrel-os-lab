@@ -84,3 +84,9 @@ SECTIONS {
 }
 
 ASSERT(_stext % 2M == 0, "virtual address must align to 2M")
+
+SECTIONS {
+    .free (NOLOAD) : ALIGN(4K) {
+        _start_free = .;
+    } > SRAM
+}
