@@ -61,7 +61,7 @@ unsafe fn main() -> ! {
         li      t3, 0x0000007fc0000000  \n/* t3: vpn2 mask */
         and     t4, t2, t3
         bnez    t4, 2f                  \n/* t4 != 0, break; t4 == 0, continue */
-        li      t5, 0x000000003fe00000  \n/* t5: vpn1 mask */
+        li      t5, 0x000000003ffff000  \n/* t5: vpn1 and vpn0 mask */
         and     t6, t2, t5
     1:  bnez    t6, 1b                  \n/* t6 != 0, loop; t6 == 0, break */
     2:
